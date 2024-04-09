@@ -1,0 +1,3 @@
+flet
+git+https://github.com/50Bytes-dev/flet-router.git
+supabase
