@@ -1,104 +1,104 @@
 from flet import *
-import flet_router as fr
-from .Base import router
 from service.supabase import supabase
-from gotrue.types import AuthResponse
+from postgrest.base_request_builder import APIResponse
 
+class ResultCard(UserControl):
+    def __init__(self, page: Page, data: dict):
+        super().__init__()
+        self.page = page
+        self.data = data
 
-@router.route(name="addContact",
-              path="/addContact"
-              )
-async def addContact(router: fr.FletRouter, page: Page):
-
-    # Handler
-
-    async def handleSearch(e):
-        if not searchInput.value:
-            searchInput.focus()
-            return
-        
-        data = supabase.table("users").select("*").eq("username", searchInput.value).execute()
-        print(data)
-        
-        if data.data == []:
-            userData.content = Container(
-                content=ListTile(
-                    title=Text("User not found"),
-                ),
-                width=10000,   
+    def build(self):
+        if self.data == {}:
+            return Card(
+                content=Container(
+                    content=ListTile(
+                        title=Text("No results found"),
+                    )
+                )
             )
-            page.update()
-            return
-        
-        data = data.data[0]
+        return Card(
+            content=Container(
+                content=ListTile(
+                    title=Text(self.data["username"], weight=FontWeight.W_500),
+                    subtitle=Text(self.data["public_key"]),
+                    leading=Container(
+                        content=Text(self.data["username"][0:2].upper(), color=colors.ON_SECONDARY_CONTAINER, weight=FontWeight.BOLD),
+                        alignment=alignment.center,
+                        width=50,
+                        height=50,
+                        border_radius=25,
+                        bgcolor=colors.SECONDARY_CONTAINER
+                    )
+                ),
+                on_click=self.handleAddContact
+            )
+        )
 
-        async def handleAddContact(e):
+    def handleAddContact(self, e):
         # on click add to client storage and route to contact page
             contact_list = [{
-                    "username": data["username"],
+                    "username": self.data["username"],
                     "last_message": "",
             }]
-            load_contact = await page.client_storage.get_async("contacts")
+            load_contact =  self.page.client_storage.get("contacts")
             if load_contact:
                 # check if contact already exists
                 for contact in load_contact:
-                    if contact["username"] == data["username"]:
-                        router.go_push("/")
+                    if contact["username"] == self.data["username"]:
+                        self.page.go("/")
                         return
                 contact_list = contact_list + load_contact
-            await page.client_storage.set_async("contacts", contact_list)
+            self.page.client_storage.set("contacts", contact_list)
             print(contact_list)
-            router.go_push("/")
-
-        userData.content = Container(
-            content=ListTile(
-                leading=Container(
-                    content=Text(data["username"][0:2].upper(), color=colors.ON_SECONDARY_CONTAINER, weight=FontWeight.BOLD),
-                    alignment=alignment.center,
-                    width=50,
-                    height=50,
-                    border_radius=25,
-                    bgcolor=colors.SECONDARY_CONTAINER,
-                ),
-                title=Text(data["username"]),
-                subtitle=Text(
-                    "Public Key: " + data["public_key"]
-                ),
-                on_click=handleAddContact,
-            ),
-            width=10000,   
+            self.page.go("/")
             
-        )
-        page.update()
 
-    # Input Fields
-    searchInput = TextField(
-        label="Search for a user",
-        border_radius=15,
-        border_color=colors.ON_SURFACE_VARIANT,
-        autofocus=True,
-        prefix_text="@ ",
-        suffix_icon=icons.SEARCH,
-        on_submit=handleSearch,
-    )
+class AddContact(UserControl):
+    def __init__(self, page: Page):
+        super().__init__()
+        self.page = page
 
-    # Components
-    userData = Card(
-    )
-
-    return View(
-        controls=[
-            AppBar(
-                title=Text("Add Contact", weight=FontWeight.BOLD),
-                center_title=True,
-                toolbar_height=64,
-                leading=IconButton(
-                    icon=icons.ARROW_BACK,
-                    on_click=lambda e: router.go_push("/"),
-                ),
+        # Input Fields
+        self.searchInput = TextField(
+            label="Search for a user",
+            border_radius=15,
+            border_color=colors.ON_SURFACE_VARIANT,
+            autofocus=True,
+            prefix_text="@ ",
+            suffix_icon=icons.SEARCH,
+            on_submit=self.handleSearch,
+            input_filter=InputFilter(
+                regex_string=r"[a-zA-Z0-9_]",
             ),
-            searchInput,
-            userData
-        ]
-    )
+        )
+
+    def build(self):
+        self.column = Column()
+        self.column.controls.append(self.searchInput)
+        return self.column
+    
+    async def handleSearch(self, e):
+        if not self.searchInput.value:
+            self.searchInput.focus()
+            return
+        print("Searching for user", self.searchInput.value)
+        self.column.controls.clear()
+        self.column.controls.append(self.searchInput)
+        
+        data : APIResponse = supabase.table("users").select("*").eq("username", self.searchInput.value).execute()
+        print(data)
+
+        if data.data == []:
+            self.column.controls.append(ResultCard(self.page, {}))
+            self.update_async()
+            return
+        
+        data = data.data[0]    
+        self.column.controls.append(ResultCard(self.page, data))
+        self.update()
+
+
+
+
         

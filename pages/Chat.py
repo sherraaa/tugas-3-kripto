@@ -1,7 +1,5 @@
 from datetime import datetime
 from flet import *
-import flet_router as fr
-from .Base import router
 
 class DateDivider(UserControl):
     def __init__(self, date):
@@ -24,10 +22,9 @@ class DateDivider(UserControl):
         )
 
 class Chat(UserControl):
-    def __init__(self, page : Page, router, username, id, type, from_user, to_user, content, created_at):
+    def __init__(self, page : Page, username, id, type, from_user, to_user, content, created_at):
         super().__init__()
         self.page = page
-        self.router = router
         self.username = username
         self.id = id
         self.type = type
@@ -42,20 +39,46 @@ class Chat(UserControl):
 
     def build(self):
         if self.type == "text":
-            content = Card(
-                content=Container(
-                    content=Text(self.content),
-                    padding=8,
-                    width=self.container_width,
-                ),
+            content = Container(
+                content=Text(self.content),
+                padding=8,
+                width=self.container_width,
             )
         else:
-            content = Card()
+            content = Container(
+                content=Column(
+                    controls=[
+                        Container(
+                            content=Text("Encrypted File", size=16),
+                            width=190,
+                            padding=8,
+                            alignment=alignment.center,
+                            bgcolor=colors.BACKGROUND,
+                            border_radius=8,
+                            border=border.all(1, colors.OUTLINE_VARIANT)
+                        ),
+                        Row(
+                            controls=[
+                                ElevatedButton(
+                                    text=("Open"),
+                                ),
+                                FilledButton(
+                                    text=("Decrypt"),
+                                )
+                            ]
+                        )
+                    ]
+                ),
+                padding=8,
+            )
 
         if self.from_user == self.username:
             return Row(
                 controls=[
-                    content,           
+                    Card(
+                        content=content,
+                        color=colors.BACKGROUND
+                    ),           
                     Text(datetime.fromisoformat(self.created_at).strftime("%H:%M"), size=12),
                 ],
                 alignment=MainAxisAlignment.START,
@@ -65,7 +88,9 @@ class Chat(UserControl):
             return Row(
                 controls=[
                     Text(datetime.fromisoformat(self.created_at).strftime("%H:%M"), size=12),
-                    content,
+                    Card(
+                        content=content,
+                    ),
                 ],
                 alignment=MainAxisAlignment.END,
                 vertical_alignment=CrossAxisAlignment.END,
@@ -75,15 +100,15 @@ class Chat(UserControl):
         print("Going to chat details", self.id)
 
 class ChatRoom(UserControl):
-    def __init__(self, page, router, username, chats):
+    def __init__(self, page, username, chats):
         super().__init__()
         self.page = page
-        self.router = router
         self.username = username
         self.chats = chats
         self.chat_list = ListView(
-            controls=[],
             spacing=4,
+            expand=True,
+            auto_scroll=True,
         )
         self.dates = {}
 
@@ -96,7 +121,6 @@ class ChatRoom(UserControl):
             self.chat_list.controls.append(
                 Chat(
                     page=self.page,
-                    router=self.router,
                     username=self.username,
                     id=chat["id"],
                     type=chat["type"],
@@ -106,7 +130,12 @@ class ChatRoom(UserControl):
                     created_at=chat["created_at"],
                 )
             )
-        return self.chat_list
+        return Container(
+            content=self.chat_list,
+            padding=4,
+            expand=True,
+            bgcolor=colors.RED_50
+        )
     
     async def add_chat(self, chat):
         date = datetime.fromisoformat(chat["created_at"]).date()
@@ -116,7 +145,6 @@ class ChatRoom(UserControl):
         self.chat_list.controls.append(
             Chat(
                 page=self.page,
-                router=self.router,
                 username=self.username,
                 id=chat["id"],
                 type=chat["type"],
@@ -127,79 +155,126 @@ class ChatRoom(UserControl):
             )
         )
         
-
-@router.route(
-    name="chat",
-    path="/chat/{username}",
-    )
-
-async def chat(
-    router: fr.FletRouter, 
-    page: Page,
-    username: str,
-    ):
-
-    print("In chat page", username)
-    chats = [
-        {
-            "id": "1",
-            "type": "text",
-            "from_user": "test",
-            "to_user": "nat",
-            "content": "Hello",
-            "created_at": "2021-10-10 19:00:00",
-        },
-        {
-            "id": "2",
-            "type": "text",
-            "from_user": "nat",
-            "to_user": "test",
-            "content": "Hi",
-            "created_at": "2021-10-10 19:02:30",
-        },
-        {
-            "id": "3",
-            "type": "text",
-            "from_user": "nat",
-            "to_user": "test",
-            "content": "How are you?",
-            "created_at": "2021-10-10 19:02:35",
-        },
-        {
-            "id": "4",
-            "type": "text",
-            "from_user": "test",
-            "to_user": "nat",
-            "content": "I'm fine. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla nec odio",
-            "created_at": "2021-10-10 19:02:40",
-        },
-        {
-            "id": "5",
-            "type": "file",
-            "from_user": "test",
-            "to_user": "nat",
-            "content": "Link",
-            "created_at": "2021-10-10 19:02:40",
-        },
-    ]
-
-    return View(
-        controls=[
-            AppBar(
-                title=Text("Chat", weight=FontWeight.BOLD),
-                center_title=True,
-                toolbar_height=64,
-                leading=IconButton(
-                    icon=icons.ARROW_BACK,
-                    on_click=lambda e: router.go_push("/"),
-                ),
-            ),
-            ChatRoom(
-                page=page,
-                router=router,
-                username=username,
-                chats=chats,
-            ),
-
+class ChatPage(UserControl):
+    def __init__(self, page, username):
+        super().__init__()
+        self.page = page
+        self.chats = [
+            {
+                "id": "1",
+                "type": "text",
+                "from_user": "test",
+                "to_user": "nat",
+                "content": "Hello",
+                "created_at": "2021-10-10 19:00:00",
+            },
+            # {
+            #     "id": "2",
+            #     "type": "text",
+            #     "from_user": "nat",
+            #     "to_user": "test",
+            #     "content": "Hi",
+            #     "created_at": "2021-10-10 19:02:30",
+            # },
+            # {
+            #     "id": "3",
+            #     "type": "text",
+            #     "from_user": "nat",
+            #     "to_user": "test",
+            #     "content": "How are you?",
+            #     "created_at": "2021-10-10 19:02:35",
+            # },
+            # {
+            #     "id": "4",
+            #     "type": "text",
+            #     "from_user": "test",
+            #     "to_user": "nat",
+            #     "content": "I'm fine. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla nec odio",
+            #     "created_at": "2021-10-10 19:02:40",
+            # },
+            # {
+            #     "id": "5",
+            #     "type": "file",
+            #     "from_user": "test",
+            #     "to_user": "nat",
+            #     "content": "Link",
+            #     "created_at": "2021-10-10 19:02:40",
+            # },
+            # {
+            #     "id": "6",
+            #     "type": "file",
+            #     "from_user": "nat",
+            #     "to_user": "test",
+            #     "content": "Link",
+            #     "created_at": "2021-10-10 19:02:40",
+            # },
+            # {
+            #     "id": "1",
+            #     "type": "text",
+            #     "from_user": "test",
+            #     "to_user": "nat",
+            #     "content": "Hello",
+            #     "created_at": "2021-10-10 19:00:00",
+            # },
+            # {
+            #     "id": "2",
+            #     "type": "text",
+            #     "from_user": "nat",
+            #     "to_user": "test",
+            #     "content": "Hi",
+            #     "created_at": "2021-10-10 19:02:30",
+            # },
+            # {
+            #     "id": "3",
+            #     "type": "text",
+            #     "from_user": "nat",
+            #     "to_user": "test",
+            #     "content": "How are you?",
+            #     "created_at": "2021-10-10 19:02:35",
+            # },
+            # {
+            #     "id": "4",
+            #     "type": "text",
+            #     "from_user": "test",
+            #     "to_user": "nat",
+            #     "content": "I'm fine. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla nec odio",
+            #     "created_at": "2021-10-10 19:02:40",
+            # },
+            # {
+            #     "id": "5",
+            #     "type": "file",
+            #     "from_user": "test",
+            #     "to_user": "nat",
+            #     "content": "Link",
+            #     "created_at": "2021-10-10 19:02:40",
+            # },
+            # {
+            #     "id": "6",
+            #     "type": "file",
+            #     "from_user": "nat",
+            #     "to_user": "test",
+            #     "content": "Link",
+            #     "created_at": "2021-10-10 19:02:40",
+            # },
         ]
-    )
+        self.username = username
+        
+
+    def build(self):
+        return Column(
+            [
+                ChatRoom(
+                    page=self.page,
+                    username=self.username,
+                    chats=self.chats,
+                ),
+                Row(
+                    [
+                        TextField(
+                            label="Type a message",
+                        )
+                    ]
+                )
+            ],
+            expand=True,
+        )

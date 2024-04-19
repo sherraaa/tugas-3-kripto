@@ -1,38 +1,50 @@
 from flet import *
-import flet_router as fr
-from pages.Base import router
+from router import views_handler
 
-# Pages 
-from pages.Contact import contact
-from pages.Auth import auth
-from pages.Profile import profile
-from pages.AddContact import addContact
-from pages.Chat import chat
-  
-async def main(page: Page): 
-    page.title = "Sus Chat?"
+   
+async def main(page: Page):
+    page.title = "Suslicious"
     page.theme = Theme(
         color_scheme_seed=colors.CYAN,
-    )
+    ) 
     page.theme_mode = ThemeMode.LIGHT
+    page.theme.page_transitions.windows = PageTransitionTheme.NONE
+    page.theme.page_transitions.android = PageTransitionTheme.NONE
 
-    app_router = fr.FletRouter.mount(
-        page,
-        routes=router.routes
-    )
-   
-    # Check if user is logged in
-    print("Checking if user is logged in")
-    print("Userid:", await page.client_storage.contains_key_async("user.id"))
-    print("Private key:", await page.client_storage.contains_key_async("user.private_key"))
-    print("Contacts:", await page.client_storage.get_async("contacts"))
+    user = {
+        'user.id': await page.client_storage.get_async('user.id'),
+        'user.username': await page.client_storage.get_async('user.username'),
+        'user.private_key': await page.client_storage.get_async('user.private_key'),
+    }
 
-    if not await page.client_storage.contains_key_async("user.id"):
-        app_router.go_push("/auth")
-    elif not await page.client_storage.contains_key_async("user.private_key"):
-        app_router.go_push("/profile")
+    print(user)
+    
+    def route_change(route):
+        page.views.clear()
+        print(page.route)
+        page.views.append(
+            views_handler(page, '/')
+        )
+        if page.route != '/':
+            page.views.append(
+                views_handler(page, page.route)
+            )
+        page.update()
+ 
+    def view_pop(view):
+        page.views.pop()
+        top_view = page.views[-1]
+        page.go(top_view.route)
+
+    page.on_route_change = route_change
+    page.on_view_pop = view_pop
+    
+    if not user['user.id']:
+        page.go('/auth')
+    elif not user['user.private_key']:
+        page.go('/profile')
     else:
-        app_router.go_root("/")
+        page.go('/')
 
 if __name__ == "__main__":
     app(target=main,
