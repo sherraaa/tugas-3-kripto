@@ -52,7 +52,7 @@ class ProfileView(View):
             style=ButtonStyle(
                 padding=15,
             ),
-            width=1000,
+            width=2000,
             on_click=self.handleRandomize,
         )
 
@@ -79,7 +79,7 @@ class ProfileView(View):
             style=ButtonStyle(
                 padding=15,
             ),
-            width=1000,
+            width=2000,
             on_click=self.handleSave,
         )
 
@@ -90,7 +90,7 @@ class ProfileView(View):
                 bgcolor=colors.ERROR,
                 padding=15,
             ),
-            width=1000,
+            width=2000,
             on_click=self.handleLogout,
         )
 
@@ -111,7 +111,7 @@ class ProfileView(View):
                                 Text("@" + self.username, weight=FontWeight.W_600, size=20)
                             ],
                             horizontal_alignment=CrossAxisAlignment.CENTER,
-                            width=10000
+                            width=20000
                         ),
                         Column(
                             [

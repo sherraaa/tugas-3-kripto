@@ -3,10 +3,11 @@ import websockets
 from flet import *
 import json
 
+from pages.Chat import MessageBubble, MessageList
 from router import views_handler
 
 from stores.user_store import UserStore
-from stores.contact_store import ContactStore, Contact
+from stores.contact_store import ContactStore, Contact, Message
 from service.supabase import supabase
 
 async def listen_for_messages(page: Page, message_queue: asyncio.Queue):
@@ -23,11 +24,49 @@ async def listen_for_messages(page: Page, message_queue: asyncio.Queue):
 async def process_messages(page: Page, message_queue: asyncio.Queue):
     while True:
         data = await message_queue.get()  # Get data from the message_queue
-        if data:
-            parsed_data = json.loads(data)
-            print("Received message:", data)
+        parsed_data = json.loads(data)
+        if parsed_data["event"] == "INSERT":
             if parsed_data['payload'].get('record', {}).get('recipient') == page.user.user.username:
                 print("Message for me")
+
+                
+                print("Adding message to contact")
+                contacts : ContactStore = page.contacts
+                contacts.add_message(
+                    Message(
+                        id=parsed_data['payload'].get('record', {}).get('id'),
+                        type=parsed_data['payload'].get('record', {}).get('type'),
+                        author=parsed_data['payload'].get('record', {}).get('author'),
+                        content=parsed_data['payload'].get('record', {}).get('content'),
+                        created_at=parsed_data['payload'].get('record', {}).get('created_at'),
+                    )
+                )
+                if '/chat/' in page.route:
+                    print("Updating chat")
+                    message_list : MessageList = page.message_list
+                    message_list.add_message(
+                        MessageBubble(
+                            page=page,
+                            message=Message(
+                                id=parsed_data['payload'].get('record', {}).get('id'),
+                                type=parsed_data['payload'].get('record', {}).get('type'),
+                                author=parsed_data['payload'].get('record', {}).get('author'),
+                                content=parsed_data['payload'].get('record', {}).get('content'),
+                                created_at=parsed_data['payload'].get('record', {}).get('created_at'),
+                            )
+                        )
+                    )
+                else:
+                    if page.route == '/':
+                        page.contact_list.load_contacts()
+                    print("Notification")
+                    page.snack_bar = SnackBar(
+                        content=Text("New message from " + parsed_data['payload'].get('record', {}).get('author')),
+                    )
+                    page.snack_bar.open = True
+                    page.update()
+
+
         # Process the received data here
 
 async def main(page: Page):
