@@ -9,6 +9,7 @@ class AuthView(View):
         self.page = page
         self.vertical_alignment = MainAxisAlignment.CENTER
         self.horizontal_alignment = CrossAxisAlignment.CENTER
+        self.padding = 15
 
         print(self.page.contacts.print_contacts())
 
@@ -113,7 +114,7 @@ class AuthView(View):
         authType = self.submitButton.text
         if authType == "Login":
             await self.handleLogin(e)
-        elif authType == "register":
+        elif authType == "Register":
             await self.handleRegister(e)
 
     async def handleLogin(self, e):
@@ -159,6 +160,7 @@ class AuthView(View):
             self.page.update()
 
     async def handleRegister(self, e):
+        print("register")
         if not self.usernameInput.value or not self.passwordInput.value or not self.repeatPasswordInput.value:
             self.page.snack_bar = SnackBar(
                 content=Text("Please fill in all fields."),

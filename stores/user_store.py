@@ -34,7 +34,6 @@ class UserStore:
             public_key=user_public_key
         )
         self.loaded = True
-        return self.user
     
     def set_user(self, id, username, private_key):
         asyncio.create_task(self._set_user(id, username, private_key))

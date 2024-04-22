@@ -20,8 +20,11 @@ class LoadingView(View):
     def on_load(self):
         while not self.page.contacts.loaded or not self.page.user.loaded:
             pass
-        if not self.page.user.user.id:
+        print(self.page.user.user.id)
+        print(self.page.user.user.private_key)
+        if self.page.user.user.id == None:
             self.page.go("/auth")
-        elif not self.page.user.user.private_key:
+        elif self.page.user.user.private_key == None:
             self.page.go("/profile")
-        self.page.go("/")
+        else:
+            self.page.go("/")
