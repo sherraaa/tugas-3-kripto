@@ -1,3 +1,4 @@
+import base64
 from typing import List
 from flet import Page
 import asyncio
@@ -31,9 +32,20 @@ class Contact:
         for message in chat:
             self.chat.append(Message(message["id"], message["type"], message["author"], message["content"], message["created_at"]))
 
-    def add_message(self, message: Message):
+    def add_message(self, message: Message, page: Page):
         self.chat.append(message)
-        self.last_message = message.content if message.type == "text" else "Sent an encrypted file"
+        if message.type == "file":
+            self.last_message = "Sent an encrypted file"
+            return
+        self.last_message = message.content 
+        if message.author == self.username:
+            last_message = message.content
+            decoded_string = base64.b64decode(last_message).decode()
+            decoded_numbers = [int(number) for number in decoded_string.split(",")]
+            decrypted = page.rsa.rsa.decrypt(decoded_numbers)
+            decrypted = base64.b64decode(decrypted.encode()).decode()
+            self.last_message = decrypted
+            
         
 
 class ContactStore: 
@@ -109,12 +121,12 @@ class ContactStore:
     def add_message(self, message : Message):
         contact = self.get_contact(message.author)
         if contact:
-            contact.add_message(message)
+            contact.add_message(message, self.page)
             self.move_contact_to_top(contact)
         else:
             contact = Contact(
                 username=message.author,
                 last_message=message.content,
             )
-            contact.add_message(message)
+            contact.add_message(message, self.page)
             self.add_contact(contact)

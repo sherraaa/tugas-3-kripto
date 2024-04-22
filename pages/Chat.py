@@ -276,7 +276,7 @@ class ChatInput(Row):
             )
 
             self.message_list.add_message(message=MessageBubble(self.page, message))
-            self.recipient.add_message(message)
+            self.recipient.add_message(message, self.page)
             self.page.client_storage.set("contacts", self.page.contacts.contacts)
             
             self.text_field.value = ""
