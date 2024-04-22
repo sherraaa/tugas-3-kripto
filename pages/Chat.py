@@ -47,7 +47,16 @@ class MessageBubble(Row):
             decrypted = base64.b64decode(decrypted.encode()).decode()
             content = decrypted
 
-
+        self.file_buttons = [
+            ElevatedButton(
+                text="Save",
+                on_click=self.handle_save,
+            ),
+            FilledButton(
+                text="Decrypt",
+                on_click=self.handle_decrypt,
+            ),
+        ]
         
         self.container_width = None
         if len(self.content) * 12 > self.page.width:
@@ -71,16 +80,7 @@ class MessageBubble(Row):
                                     border=border.all(1, colors.OUTLINE_VARIANT)
                                 ),
                                 Row(
-                                    controls=[
-                                        ElevatedButton(
-                                            text=("Save"),
-                                            on_click=self.handle_save,
-                                        ),
-                                        FilledButton(
-                                            text=("Decrypt"),
-                                            on_click=self.handle_decrypt,
-                                        )
-                                    ]
+                                    controls=self.file_buttons if not self.rtl else []
                                 )
                             ]
                         ),
@@ -239,9 +239,14 @@ class ChatInput(Row):
         
         # convert to base64
         file_data = base64.b64encode(file_data).decode()
+        encrypted_file = self.page.recipient_rsa.encrypt(file_data)
+        numbers = encrypted_file
+        numbers_str = [str(number) for number in numbers]
+        numbers_combined = ",".join(numbers_str)
+        base64_encoded = base64.b64encode(numbers_combined.encode()).decode()
 
         return supabase.table("files").insert({
-            "data" : file_data,
+            "data" : base64_encoded,
         }).execute()
 
 
