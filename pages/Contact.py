@@ -1,5 +1,7 @@
 from flet import *
 
+from stores.contact_store import Message
+
 class ContactCard(Card):
     def __init__(self, page: Page, username: str, last_message: str):
         super().__init__()
@@ -47,6 +49,7 @@ class ContactList(Container):
         self.expand = True
 
     def load_contacts(self):
+        self.contact_list.controls.clear()
         for contact in self.contacts:
             self.contact_list.controls.append(
                 ContactCard(
@@ -56,6 +59,7 @@ class ContactList(Container):
                 )
             )
         self.page.update()
+
 
 class ContactView(View):
     def __init__(self, page: Page):
@@ -85,6 +89,9 @@ class ContactView(View):
             bgcolor=colors.SECONDARY_CONTAINER
         )
 
+        self.contact_list = ContactList(page)
+        self.page.contact_list = self.contact_list
+
         self.controls = [
-            ContactList(page),
+            self.contact_list
         ]

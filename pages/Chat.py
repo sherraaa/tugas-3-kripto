@@ -92,10 +92,11 @@ class MessageList(Container):
     )
     dates = {}
 
-    def __init__(self, page: Page, chat):
+    def __init__(self, page: Page, chat, recipient: Contact):
         super().__init__()
         self.page = page
         self.chat = chat
+        self.recipient = recipient
         if self.message_list.controls:
             self.message_list.controls.clear()
             self.dates.clear()
@@ -122,6 +123,7 @@ class MessageList(Container):
         self.message_list.controls.append(
             message
         )
+        # self.recipient.add_message(message)
         self.page.update()
 
 class ChatInput(Row):
@@ -178,8 +180,8 @@ class ChatInput(Row):
                 created_at=data[1][0]['created_at'],
             )
 
-            self.recipient.add_message(message)
             self.message_list.add_message(message=MessageBubble(self.page, message))
+            self.recipient.add_message(message)
 
             self.text_field.value = ""
             self.page.update()
@@ -202,7 +204,7 @@ class ChatView(View):
         self.chat : List[Message] = self.contact.chat
 
         # COMPONENTS
-        self.message_list = MessageList(page, self.chat)
+        self.message_list = MessageList(page, self.chat, self.contact)
         self.page.message_list = self.message_list
         self.chat_input = ChatInput(page, self.message_list, self.contact)
 

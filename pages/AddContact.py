@@ -44,8 +44,7 @@ class ResultCard(UserControl):
             Contact(
                 username=self.data["username"],
                 last_message="Start a conversation with " + self.data["username"] + " now!",
-                chat=[],
-                move_to_top=contacts.move_contact_to_top
+                chat=[]
             )
         )
         self.page.go("/")
