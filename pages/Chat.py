@@ -38,6 +38,7 @@ class MessageBubble(Row):
         self.status = Text(datetime.fromisoformat(message.created_at).strftime("%H:%M"), size=12)
 
         content = self.content
+        self.container_width = None
 
         if self.author != self.page.user.user.username:
             # decrypting
@@ -46,6 +47,12 @@ class MessageBubble(Row):
             decrypted = self.page.rsa.rsa.decrypt(decoded_numbers)
             decrypted = base64.b64decode(decrypted.encode()).decode()
             content = decrypted
+            if len(content) * 12 > self.page.width:
+                self.container_width = self.page.width - 150 + ((len(content) * 8 - self.page.width) / (len(content) * 8) * 50)
+        else:
+            if len(self.content) * 12 > self.page.width:
+                self.container_width = self.page.width - 150 + ((len(self.content) * 8 - self.page.width) / (len(self.content) * 8) * 50)
+
 
         self.file_buttons = [
             ElevatedButton(
@@ -58,10 +65,6 @@ class MessageBubble(Row):
             ),
         ]
         
-        self.container_width = None
-        if len(self.content) * 12 > self.page.width:
-            self.container_width = self.page.width - 150 + ((len(self.content) * 8 - self.page.width) / (len(self.content) * 8) * 50)
-
         self.rtl = self.author == self.page.user.user.username
         self.vertical_alignment = CrossAxisAlignment.END
         if self.type == "file":
