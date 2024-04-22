@@ -31,6 +31,9 @@ class MessageView(View):
                 numbers_combined = ",".join(numbers_str)
                 self.content = base64.b64encode(numbers_combined.encode()).decode()
                 self.label = "Ciphertext"
+            else:
+                self.content = self.message.content
+                self.label = "Ciphertext"
 
         self.appbar = AppBar(
             title=Text("Message", weight=FontWeight.BOLD),

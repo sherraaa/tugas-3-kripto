@@ -32,8 +32,22 @@ class MessageBubble(Row):
         self.type = message.type
         self.author = message.author
         self.content = message.content
+        print(self.content)
+
         self.created_at = message.created_at
         self.status = Text(datetime.fromisoformat(message.created_at).strftime("%H:%M"), size=12)
+
+        content = self.content
+
+        if self.author != self.page.user.user.username:
+            # decrypting
+            decoded_string = base64.b64decode(self.content).decode()
+            decoded_numbers = [int(number) for number in decoded_string.split(",")]
+            decrypted = self.page.rsa.rsa.decrypt(decoded_numbers)
+            decrypted = base64.b64decode(decrypted.encode()).decode()
+            content = decrypted
+
+
         
         self.container_width = None
         if len(self.content) * 12 > self.page.width:
@@ -80,7 +94,7 @@ class MessageBubble(Row):
             self.controls = [
                 Card(
                     content=Container(
-                        content=Text(self.content),
+                        content=Text(content),
                         padding=8,
                         width=self.container_width,
                         on_click=self.on_click_text,
