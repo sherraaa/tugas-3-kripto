@@ -1,6 +1,7 @@
 from flet import *
 from service.supabase import supabase
 from gotrue.types import AuthResponse
+from lib.rsa_oop import RSA
               
 class ProfileView(View):
     def __init__(self, page: Page,):
@@ -17,6 +18,7 @@ class ProfileView(View):
             border_color=colors.ON_SURFACE_VARIANT,
             input_filter=NumbersOnlyInputFilter(),
             expand=True,
+            read_only=True
         )
 
         self.qInput = TextField(
@@ -25,6 +27,7 @@ class ProfileView(View):
             border_color=colors.ON_SURFACE_VARIANT,
             input_filter=NumbersOnlyInputFilter(),
             expand=True,
+            read_only=True
         )
 
         self.private_key = TextField(
@@ -41,8 +44,6 @@ class ProfileView(View):
             border_radius=15,
             border_color=colors.ON_SURFACE_VARIANT,
             read_only=True,
-            min_lines=2,
-            max_lines=2,
         )
 
         # Buttons
@@ -157,12 +158,13 @@ class ProfileView(View):
 
     # Handlers
     def handleRandomize(self, e):
-        # p = random_prime(10)
-        # q = random_prime(10)
-        # private_key.value = str(p * q)
-        # public_key.value = f"({p}, {q})"
-        # page.update()
-        pass
+        rsa_keys = RSA()
+        rsa_keys.generate_keys()
+        self.pInput.value = str(rsa_keys.p)
+        self.qInput.value = str(rsa_keys.q)
+        self.private_key.value = f"({rsa_keys.d}, {rsa_keys.n})"
+        self.public_key.value = f"({rsa_keys.e}, {rsa_keys.n})"
+        self.page.update()
 
     def handleExport(self, e):
         pass
