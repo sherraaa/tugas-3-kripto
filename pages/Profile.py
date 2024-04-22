@@ -1,8 +1,10 @@
+import json
 from flet import *
 from service.supabase import supabase
 from gotrue.types import UserResponse
 from lib.rsa_oop import RSA
 from stores.key_store import KeyStore
+import os
               
 class ProfileView(View):
     def __init__(self, page: Page,):
@@ -14,6 +16,16 @@ class ProfileView(View):
         self.rsa : KeyStore = self.page.rsa
 
         # Components
+        self.pick_file = FilePicker(
+            on_result=self.handleUpload,
+        )
+        self.save_file = FilePicker(
+            on_result=self.handleExport,
+        )
+        self.page.overlay.append(self.pick_file)
+        self.page.overlay.append(self.save_file)
+
+
         self.pInput = TextField(
             label="P",
             border_radius=15,
@@ -67,7 +79,7 @@ class ProfileView(View):
                 padding=15,
             ),
             expand=True,
-            on_click=self.handleExport,
+            on_click=lambda _: self.save_file.get_directory_path(),
         )
 
         self.uploadButton = ElevatedButton(
@@ -76,7 +88,10 @@ class ProfileView(View):
                 padding=15,
             ),
             expand=True,
-            on_click=self.handleUpload,
+            on_click=lambda _ : self.pick_file.pick_files(
+                allow_multiple=False,
+                allowed_extensions=["sus"]
+            )
         )
 
         self.saveButton = FilledButton(
@@ -171,36 +186,92 @@ class ProfileView(View):
         self.page.update()
 
     def handleExport(self, e):
-        pass
+        private_key = self.private_key.value
+        public_key = self.public_key.value
+
+        if not private_key or not public_key:
+            self.page.snack_bar = SnackBar(
+                content=Text("Please generate keys first."),
+            )
+            self.page.snack_bar.open = True
+            self.page.update()
+            return
+        
+        save_location = e.path
+        if save_location:
+            try:
+                data = {
+                    "private_key" : private_key,
+                    "public_key" : public_key
+                }
+                with open(os.path.join(save_location, "keyeyeyes.sus"), "w") as f:
+                    json.dump(data, f)
+                self.page.snack_bar = SnackBar(
+                    content=Text("Saved!"),
+                )
+                self.page.snack_bar.open = True
+                self.page.update()
+            except Exception as e:
+                self.page.snack_bar = SnackBar(
+                    content=Text(e),
+                )
+                self.page.snack_bar.open = True
+                self.page.update()
+        else:
+            self.page.snack_bar = SnackBar(
+                content=Text("Please select a location."),
+            )
+            self.page.snack_bar.open = True
+            self.page.update()
 
     def handleUpload(self, e):
-        pass
+        file_dir = e.files[0].path
+        if file_dir:
+            try:
+                with open(file_dir, "r") as f:
+                    data = json.load(f)
+                    print(data)
+                    self.private_key.value = data["private_key"]
+                    self.public_key.value = data["public_key"]
+                    self.page.update()
+            except Exception as e:
+                self.page.snack_bar = SnackBar(
+                    content=Text(e),
+                )
+                self.page.snack_bar.open = True
+                self.page.update()
+        else:
+            self.page.snack_bar = SnackBar(
+                content=Text("Please select a file."),
+            )
+            self.page.snack_bar.open = True
+            self.page.update()
 
     def handleSave(self, e):
-        # try:
-        res : UserResponse = supabase.auth.update_user({
-            "data" : {
-                "public_key" : self.public_key.value,
-            }
-        })
-        self.rsa.set_keys(self.public_key.value, self.private_key.value)
-        self.page.snack_bar = SnackBar(
-            content=Text("Saved!"),
-        )
+        try:
+            res : UserResponse = supabase.auth.update_user({
+                "data" : {
+                    "public_key" : self.public_key.value,
+                }
+            })
+            self.rsa.set_keys(self.public_key.value, self.private_key.value)
+            self.page.snack_bar = SnackBar(
+                content=Text("Saved!"),
+            )
 
-        self.page.user.set_public_key(self.public_key.value)
-        self.page.user.set_private_key(self.private_key.value)
+            self.page.user.set_public_key(self.public_key.value)
+            self.page.user.set_private_key(self.private_key.value)
 
-        self.page.snack_bar.open = True
-        self.page.update()
-        self.page.go("/")
+            self.page.snack_bar.open = True
+            self.page.update()
+            self.page.go("/")
 
-        # except Exception as e:
-        #     self.page.snack_bar = SnackBar(
-        #         content=Text(e),
-        #     )
-        #     self.page.snack_bar.open = True
-        #     self.page.update()
+        except Exception as e:
+            self.page.snack_bar = SnackBar(
+                content=Text(e),
+            )
+            self.page.snack_bar.open = True
+            self.page.update()
 
     def handleLogout(self, e):
         self.page.user.logout()
