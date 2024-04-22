@@ -2,12 +2,19 @@ from flet import *
 from service.supabase import supabase
 from gotrue.types import AuthResponse
 
-class Auth(UserControl):
+class AuthView(View):
     def __init__(self, page: Page):
         super().__init__()
+        self.route = "/auth"
         self.page = page
-        
-    def build(self):
+        self.vertical_alignment = MainAxisAlignment.CENTER
+        self.horizontal_alignment = CrossAxisAlignment.CENTER
+        self.spacing = 25
+
+        print(self.page.contacts.print_contacts())
+
+        # Components
+
         self.usernameInput = TextField(
             label="Username",
             border_radius=15,
@@ -16,6 +23,7 @@ class Auth(UserControl):
                 regex_string=r"[a-zA-Z0-9_]",
             ),
         )
+
         self.passwordInput = TextField(
             label="Password",
             border_radius=15,
@@ -23,12 +31,15 @@ class Auth(UserControl):
             password=True,
             can_reveal_password=True,
         )
+
         self.repeatPasswordInput = TextField(
             label="Repeat Password",
             border_radius=15,
             border_color=colors.ON_SURFACE_VARIANT,
             password=True,
         )
+        self.repeatPasswordInput.visible = False
+
         self.submitButton = FilledButton(
             text="Login",
             style=ButtonStyle(
@@ -38,61 +49,59 @@ class Auth(UserControl):
             on_click=self.handleAuth,
         )
 
-        self.column = Column()
-        self.column.controls.append(self.usernameInput)
-        self.column.controls.append(self.passwordInput)
-
-        return Column(
-            controls=[
-                Container(
-                    content=Image(
-                        src="splash.png",
-                        width=100,
-                        height=100,
-                    ),
-                    width=500,
-                    height=400,
-                    bgcolor=colors.SECONDARY_CONTAINER,
-                    border_radius=100,
-                    padding=50,
-                ),
-                SegmentedButton(
-                    on_change=self.handleChange,
-                    show_selected_icon=False,
-                    selected={"login"},
-                    segments=[
-                        Segment(
-                            value="login",
-                            label=Text("Login"),
-                        ),
-                        Segment(
-                            value="register",
-                            label=Text("Register"),
-                        ),
-                    ]
-                ),
-                Column(
-                    [
-                        self.column,
-                        self.submitButton,
-                    ],
-                    spacing=20,
-                )
-            ],
-            spacing=25,
-            horizontal_alignment=CrossAxisAlignment.CENTER
+        self.image = Container(
+            content=Image(
+                src="sus.png",
+                width=100,
+                height=100,
+            ),
+            width=400,
+            height=400,
+            bgcolor=colors.SECONDARY_CONTAINER,
+            border_radius=100,
+            padding=50,
         )
+
+        self.segmentedButton = SegmentedButton(
+            on_change=self.handleChange,
+            show_selected_icon=False,
+            selected={"login"},
+            segments=[
+                Segment(
+                    value="login",
+                    label=Text("Login"),
+                ),
+                Segment(
+                    value="register",
+                    label=Text("Register"),
+                ),
+            ]
+        )
+
+        self.controls = [
+            self.image,
+            self.segmentedButton,
+            Column(
+                [
+                    self.usernameInput,
+                    self.passwordInput,
+                    self.repeatPasswordInput,
+                    self.submitButton,
+                ],
+                spacing=20,
+            )
+        ]
     
     async def handleChange(self, e):
         authType = self.submitButton.text
         print(authType)
         if authType == "Login":
             print("Adding repeat password input")
-            self.column.controls.append(self.repeatPasswordInput)
+            self.repeatPasswordInput.visible = True
             self.submitButton.text = "Register"
         else:
             print("Removing repeat password input")
-            self.column.controls.remove(self.repeatPasswordInput)
+            self.repeatPasswordInput.visible = False
             self.submitButton.text = "Login"
         self.update()
 
@@ -130,10 +139,10 @@ class Auth(UserControl):
             userid = user.user.id
             username = user.user.user_metadata['username']
 
-            await self.page.client_storage.set_async("user.id", userid)
-            await self.page.client_storage.set_async("user.username", username)
+            self.page.user.set_user(userid, username, None)
+            await self.page.contacts.load_contacts()
 
-            self.page.go("/")
+            self.page.go("/loading")
             print("Logged in")
         except Exception as e:
             self.page.snack_bar = SnackBar(
@@ -202,10 +211,10 @@ class Auth(UserControl):
             userid = user.user.id
             username = user.user.user_metadata['username']
 
-            self.page.client_storage.set_async("user.id", userid)
-            self.page.client_storage.set_async("user.username", username)
+            self.page.user.set_user(userid, username, None)
+            await self.page.contacts.load_contacts()
 
-            self.page.go("/")
+            self.page.go("/loading")
 
         except Exception as e:
             self.page.snack_bar = SnackBar(

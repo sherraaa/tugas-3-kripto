@@ -2,36 +2,41 @@ from flet import *
 from service.supabase import supabase
 from gotrue.types import AuthResponse
               
-class Profile(UserControl):
-    def __init__(self, page: Page):
+class ProfileView(View):
+    def __init__(self, page: Page,):
         super().__init__()
+        self.route = "/profile"
         self.page = page
-        self.username = self.page.client_storage.get("user.username") or "Dummy"
+        self.username = self.page.user.user.username or "Dummy"
+        self.scroll = ScrollMode.ADAPTIVE
 
-    def build(self):
-        pInput = TextField(
+        # Components
+        self.pInput = TextField(
             label="P",
             border_radius=15,
             border_color=colors.ON_SURFACE_VARIANT,
             input_filter=NumbersOnlyInputFilter(),
             expand=True,
         )
-        qInput = TextField(
+
+        self.qInput = TextField(
             label="Q",
             border_radius=15,
             border_color=colors.ON_SURFACE_VARIANT,
             input_filter=NumbersOnlyInputFilter(),
             expand=True,
         )
-        private_key = TextField(
+
+        self.private_key = TextField(
             label="Private Key",
             border_radius=15,
             border_color=colors.ON_SURFACE_VARIANT,
             password=True,
             can_reveal_password=True,
             read_only=True,
-        ) 
-        public_key = TextField(
+        )
+
+        self.public_key = TextField(
             label="Public Key",
             border_radius=15,
             border_color=colors.ON_SURFACE_VARIANT,
@@ -41,30 +46,35 @@ class Profile(UserControl):
         )
 
         # Buttons
-        randomizeButton = ElevatedButton(
+
+        self.randomizeButton = ElevatedButton(
             text="Randomize",
             style=ButtonStyle(
                 padding=15,
             ),
             width=1000,
+            on_click=self.handleRandomize,
         )
-        exportButton = ElevatedButton(
+
+        self.exportButton = ElevatedButton(
             text="Export",
             style=ButtonStyle(
                 padding=15,
             ),
             expand=True,
+            on_click=self.handleExport,
         )
-        if private_key.value == "" or public_key.value == "":
-            exportButton.disabled = True
-        uploadButton = ElevatedButton(
+
+        self.uploadButton = ElevatedButton(
             text="Upload",
             style=ButtonStyle(
                 padding=15,
             ),
             expand=True,
+            on_click=self.handleUpload,
         )
-        saveButton = FilledButton(
+
+        self.saveButton = FilledButton(
             text="Save",
             style=ButtonStyle(
                 padding=15,
@@ -72,7 +82,8 @@ class Profile(UserControl):
             width=1000,
             on_click=self.handleSave,
         )
-        logoutButton = FilledButton(
+
+        self.logoutButton = FilledButton(
             text="Logout",
             style=ButtonStyle(
                 color=colors.ON_ERROR,
@@ -83,69 +94,66 @@ class Profile(UserControl):
             on_click=self.handleLogout,
         )
 
-        return Column(
-            controls=[
-                Container(
-                    content=Column(
-                        [
-                            Column(
-                                [
-                                    Container(
-                                        content=Text(self.username[0:2].upper(), color=colors.ON_SECONDARY_CONTAINER, weight=FontWeight.BOLD),
-                                        alignment=alignment.center,
-                                        width=50,
-                                        height=50,
-                                        border_radius=25,
-                                        bgcolor=colors.SECONDARY_CONTAINER,
-                                    ),
-                                    Text("@" + self.username, weight=FontWeight.W_600, size=20)
-                                ],
-                                horizontal_alignment=CrossAxisAlignment.CENTER,
-                                width=10000
-                            ),
-                            Column(
-                                [
-                                    Row(
-                                        [
-                                            pInput,
-                                            qInput,              
-                                        ],
-                                        spacing=8,
-                                    ),
-                                    randomizeButton,
-                                ],
-                                spacing=10,
-                            ),
-                            Column(
-                                [
-                                    private_key,
-                                    public_key,
-                                    Row(
-                                        [
-                                            exportButton,
-                                            uploadButton,
-                                        ],
-                                        spacing=8,
-                                    )
-                                ],
-                                spacing=10,
-                            ),
-                            Column(
-                                [
-                                    saveButton,
-                                    logoutButton,
-                                ],
-                                spacing=10,
-                            ),
-                        ],
-                        spacing=25,
-                    ),
-                    margin=margin.only(left=25, top=75, right=25),
-                    alignment=alignment.top_center
-                )
-            ],
-        )
-        
+        self.controls = [
+            Container(
+                content=Column(
+                    [
+                        Column(
+                            [
+                                Container(
+                                    content=Text(self.username[0:2].upper(), color=colors.ON_SECONDARY_CONTAINER, weight=FontWeight.BOLD),
+                                    alignment=alignment.center,
+                                    width=50,
+                                    height=50,
+                                    border_radius=25,
+                                    bgcolor=colors.SECONDARY_CONTAINER,
+                                ),
+                                Text("@" + self.username, weight=FontWeight.W_600, size=20)
+                            ],
+                            horizontal_alignment=CrossAxisAlignment.CENTER,
+                            width=10000
+                        ),
+                        Column(
+                            [
+                                Row(
+                                    [
+                                        self.pInput,
+                                        self.qInput,              
+                                    ],
+                                    spacing=8,
+                                ),
+                                self.randomizeButton,
+                            ],
+                            spacing=10,
+                        ),
+                        Column(
+                            [
+                                self.private_key,
+                                self.public_key,
+                                Row(
+                                    [
+                                        self.exportButton,
+                                        self.uploadButton,
+                                    ],
+                                    spacing=8,
+                                )
+                            ],
+                            spacing=10,
+                        ),
+                        Column(
+                            [
+                                self.saveButton,
+                                self.logoutButton,
+                            ],
+                            spacing=10,
+                        ),
+                    ],
+                    spacing=25,
+                ),
+                margin=margin.only(left=25, top=75, right=25),
+                alignment=alignment.top_center
+            )
+        ]
 
     # Handlers
     def handleRandomize(self, e):
@@ -163,16 +171,12 @@ class Profile(UserControl):
         pass
 
     def handleSave(self, e):
-        self.page.client_storage.set("user.private_key", "test")
-        self.page.client_storage.set("user.public_key", "test")
+        self.page.user.set_private_key(self.private_key.value)
         self.page.update()
         self.page.go("/")
         pass
 
     def handleLogout(self, e):
-        self.page.client_storage.clear()
-        self.page.update()
+        self.page.user.logout()
+        self.page.contacts.clear()
         self.page.go("/auth")
-
-    # Input Fields
-    

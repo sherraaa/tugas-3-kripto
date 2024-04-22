@@ -2,6 +2,8 @@ from flet import *
 from service.supabase import supabase
 from postgrest.base_request_builder import APIResponse
 
+from stores.contact_store import ContactStore, Contact
+
 class ResultCard(UserControl):
     def __init__(self, page: Page, data: dict):
         super().__init__()
@@ -13,7 +15,7 @@ class ResultCard(UserControl):
             return Card(
                 content=Container(
                     content=ListTile(
-                        title=Text("No results found"),
+                        title=Text("No user found"),
                     )
                 )
             )
@@ -37,29 +39,27 @@ class ResultCard(UserControl):
 
     def handleAddContact(self, e):
         # on click add to client storage and route to contact page
-            contact_list = [{
-                    "username": self.data["username"],
-                    "last_message": "",
-            }]
-            load_contact =  self.page.client_storage.get("contacts")
-            if load_contact:
-                # check if contact already exists
-                for contact in load_contact:
-                    if contact["username"] == self.data["username"]:
-                        self.page.go("/")
-                        return
-                contact_list = contact_list + load_contact
-            self.page.client_storage.set("contacts", contact_list)
-            print(contact_list)
-            self.page.go("/")
+        contacts : ContactStore = self.page.contacts
+        contacts.add_contact(
+            Contact(
+                username=self.data["username"],
+                last_message="Start a conversation with " + self.data["username"] + " now!",
+                chat=[],
+                move_to_top=contacts.move_contact_to_top
+            )
+        )
+        self.page.go("/")
             
 
-class AddContact(UserControl):
+class AddContactView(View):
+
+
     def __init__(self, page: Page):
         super().__init__()
+        self.route = "/addContact"
         self.page = page
 
-        # Input Fields
+        # Components
         self.searchInput = TextField(
             label="Search for a user",
             border_radius=15,
@@ -73,30 +73,40 @@ class AddContact(UserControl):
             ),
         )
 
-    def build(self):
-        self.column = Column()
-        self.column.controls.append(self.searchInput)
-        return self.column
+        self.appbar = AppBar(
+            title=Text("Add Contact", weight=FontWeight.BOLD),
+            center_title=True,
+            toolbar_height=64,
+            leading=IconButton(
+                icon=icons.ARROW_BACK,
+                on_click=lambda e: self.page.go("/"),
+            ),
+        )
+
+        self.controls = [
+            self.searchInput
+        ]
     
     async def handleSearch(self, e):
-        if not self.searchInput.value:
+        if not self.searchInput.value or self.searchInput.value == self.page.user.user.username:
             self.searchInput.focus()
             return
         print("Searching for user", self.searchInput.value)
-        self.column.controls.clear()
-        self.column.controls.append(self.searchInput)
+        if self.controls:
+            self.controls.clear()
+            self.controls.append(self.searchInput)
         
         data : APIResponse = supabase.table("users").select("*").eq("username", self.searchInput.value).execute()
         print(data)
 
         if data.data == []:
-            self.column.controls.append(ResultCard(self.page, {}))
-            self.update_async()
+            self.controls.append(ResultCard(self.page, {}))
+            self.page.update()
             return
         
         data = data.data[0]    
-        self.column.controls.append(ResultCard(self.page, data))
-        self.update()
+        self.controls.append(ResultCard(self.page, data))
+        self.page.update()
 
 
 
