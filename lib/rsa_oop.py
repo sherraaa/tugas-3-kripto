@@ -12,7 +12,7 @@ class RSA:
         self.public_key : str = public_key
         self.private_key : str = private_key
 
-        if public_key and private_key:
+        if public_key or private_key:
             self.set_keys(public_key, private_key)
 
     def set_keys(self, public_key: str = None, private_key: str = None):
@@ -49,7 +49,7 @@ class RSA:
 
     def generate_random_prime(self):
         while True:
-            n = random.randint(100, 1000)
+            n = random.randint(pow(1024-1, 2), pow(1024, 2))
             if self.is_prime(n):
                 return n
 
@@ -97,17 +97,13 @@ class RSA:
     def encrypt(self, plaintext):
         # plaintext is converted to base64 already
         # convert base64 to int indexing
-        print("1")
         plaintext = str(self.convert_message_to_int(plaintext))
-
         # split the plaintext into blocks of 4 digits
-        print("2")
         blocks = [plaintext[i:i+4] for i in range(0, len(plaintext), 4)]
 
         # encrypt each block
         ciphertext = []
         for block in blocks:
-            print("3")
             ciphertext.append(pow(int(block), self.e, self.n))
 
         return ciphertext
@@ -130,7 +126,7 @@ rsa.generate_keys()
 print(rsa.public_key)
 print(rsa.private_key)
 
-plaintext = "Hello, World!"
+plaintext = "mang"
 # convert plaintext to base64
 plaintext = base64.b64encode(plaintext.encode()).decode()
 ciphertext = rsa.encrypt(plaintext)

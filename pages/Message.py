@@ -1,3 +1,4 @@
+import base64
 from flet import *
 from service.supabase import supabase
 from pages.Chat import MessageBubble
@@ -20,6 +21,16 @@ class MessageView(View):
         if self.type == "file":
             data, count = supabase.table("files").select("*").eq("id", self.message.content).execute()
             print(data)
+        else:
+            if self.encrypt_or_decrypt == "encrypt":
+                content = self.message.content
+                content_base64 = base64.b64encode(content.encode()).decode()
+                encrypted_content = self.page.recipient_rsa.encrypt(content_base64)
+                numbers = encrypted_content
+                numbers_str = [str(number) for number in numbers]
+                numbers_combined = ",".join(numbers_str)
+                self.content = base64.b64encode(numbers_combined.encode()).decode()
+                self.label = "Ciphertext"
 
         self.appbar = AppBar(
             title=Text("Message", weight=FontWeight.BOLD),
@@ -32,13 +43,14 @@ class MessageView(View):
         )
 
         self.text_field = TextField(
-            value=self.message.content,
-            label="Plaintext",
+            value=self.content,
+            label=self.label,
             border_radius=15,
             border_color=colors.ON_SURFACE_VARIANT,
             expand=True,
+            min_lines=3,
+            max_lines=10,
         )
-
 
         self.save_button = FilledButton(
             text="Save",

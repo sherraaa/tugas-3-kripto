@@ -2,6 +2,7 @@ import base64
 from datetime import datetime
 from typing import List
 from flet import *
+from lib.rsa_oop import RSA
 from service.supabase import supabase
 from stores.contact_store import Contact, Message
 
@@ -91,7 +92,10 @@ class MessageBubble(Row):
 
     def on_click_text(self, e):
         self.page.message = self.message
-        self.page.go("/message/text/decyrpt")
+        if self.author == self.page.user.user.username:
+            self.page.go("/message/text/encrypt")
+        else:
+            self.page.go("/message/text/decyrpt")
 
     def handle_save(self, e):
         self.page.message = self.message
@@ -233,11 +237,19 @@ class ChatInput(Row):
             if self.type == "file":
                 file_data, count = self.on_upload()
 
+            content = self.text_field.value if self.type == "text" else file_data[1][0]['id']
+            content_base64 = base64.b64encode(content.encode()).decode()
+            encrypted_content = self.page.recipient_rsa.encrypt(content_base64)
+            numbers = encrypted_content
+            numbers_str = [str(number) for number in numbers]
+            numbers_combined = ",".join(numbers_str)
+            base64_encoded = base64.b64encode(numbers_combined.encode()).decode()
+
             data, count = supabase.table("messages").insert({
                 "type": "text" if self.type == "text" else "file",
                 "author": self.page.user.user.username,
                 "recipient": self.recipient.username,
-                "content": self.text_field.value if self.type == "text" else file_data[1][0]['id'],
+                "content": base64_encoded,
                 "created_at": datetime.now().isoformat(),
             }).execute()
 
@@ -245,7 +257,7 @@ class ChatInput(Row):
                 id=data[1][0]['id'],
                 type=data[1][0]['type'],
                 author=data[1][0]['author'],
-                content=data[1][0]['content'],
+                content=content,
                 created_at=data[1][0]['created_at'],
             )
 
@@ -291,6 +303,10 @@ class ChatView(View):
         self.page : Page = page
         self.contact : Contact = self.page.contacts.get_contact(contact)
         self.chat : List[Message] = self.contact.chat
+
+        data, count = supabase.table("users").select("public_key").eq("username", self.contact.username).execute()
+        self.page.recipient_public_key = data[1][0]['public_key']
+        self.page.recipient_rsa = RSA(self.page.recipient_public_key)
 
         # COMPONENTS
         self.message_list = MessageList(page, self.chat, self.contact)

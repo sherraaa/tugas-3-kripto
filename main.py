@@ -79,6 +79,24 @@ async def main(page: Page):
     page.theme.page_transitions.windows = PageTransitionTheme.NONE
     page.theme.page_transitions.android = PageTransitionTheme.NONE
 
+    
+
+    def route_change(route):
+        page.views.clear()
+        print(page.route)
+        page.views.append(
+            views_handler(page, page.route)
+        )
+        page.update()
+ 
+    def view_pop(view):
+        page.views.pop()
+        top_view = page.views[-1]
+        page.go(top_view.route)
+
+    page.on_route_change = route_change
+    page.on_view_pop = view_pop
+
     # await page.client_storage.clear()
     
     # Create a message queue
@@ -97,27 +115,16 @@ async def main(page: Page):
 
     session_access_token = await page.client_storage.get_async("session.access_token")
     session_refresh_token = await page.client_storage.get_async("session.refresh_token")
-    if session_access_token and session_refresh_token:
-        supabase.auth.set_session(
-            access_token=session_access_token,
-            refresh_token=session_refresh_token
-        )
-
-    def route_change(route):
-        page.views.clear()
-        print(page.route)
-        page.views.append(
-            views_handler(page, page.route)
-        )
-        page.update()
- 
-    def view_pop(view):
-        page.views.pop()
-        top_view = page.views[-1]
-        page.go(top_view.route)
-
-    page.on_route_change = route_change
-    page.on_view_pop = view_pop
+    try:
+        if session_access_token and session_refresh_token:
+            supabase.auth.set_session(
+                access_token=session_access_token,
+                refresh_token=session_refresh_token
+            )
+    except Exception as e:
+        print(e)
+        await page.client_storage.clear_async()
+    
     
 
     # page.go("/message/file/decrypt")
