@@ -15,14 +15,24 @@ class RSA:
         if public_key and private_key:
             self.set_keys(public_key, private_key)
 
-    def set_keys(self, public_key: str, private_key: str):
+    def set_keys(self, public_key: str = None, private_key: str = None):
+        if public_key:
+            self.set_public_key(public_key)
+        if private_key:
+            self.set_private_key(private_key)
+
+    def set_public_key(self, public_key: str):
         self.public_key = public_key
-        self.private_key = private_key
 
         public_key = public_key.replace("(", "").replace(")", "").replace(" ", "")
-        private_key = private_key.replace("(", "").replace(")", "").replace(" ", "")
 
         self.n = int(public_key.split(",")[1])
+
+    def set_private_key(self, private_key: str):
+        self.private_key = private_key
+
+        private_key = private_key.replace("(", "").replace(")", "").replace(" ", "")
+
         self.d = int(private_key.split(",")[0])
 
     def is_prime(self, n):
@@ -39,7 +49,7 @@ class RSA:
 
     def generate_random_prime(self):
         while True:
-            n = random.randint(pow(1024-1, 2), pow(1024, 2))
+            n = random.randint(100, 1000)
             if self.is_prime(n):
                 return n
 
@@ -87,14 +97,17 @@ class RSA:
     def encrypt(self, plaintext):
         # plaintext is converted to base64 already
         # convert base64 to int indexing
+        print("1")
         plaintext = str(self.convert_message_to_int(plaintext))
 
         # split the plaintext into blocks of 4 digits
+        print("2")
         blocks = [plaintext[i:i+4] for i in range(0, len(plaintext), 4)]
 
         # encrypt each block
         ciphertext = []
         for block in blocks:
+            print("3")
             ciphertext.append(pow(int(block), self.e, self.n))
 
         return ciphertext
