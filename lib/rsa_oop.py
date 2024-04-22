@@ -5,7 +5,7 @@ class RSA:
     def __init__(self):
         self.p = None
         self.q = None
-        self.e = None
+        self.e = 65537 # 2^16 + 1, a common choice for RSA encryption
         self.d = None
         self.n = None
         self.public_key = None
@@ -38,18 +38,16 @@ class RSA:
         return pow(a, -1, m)
 
     def generate_keys(self):
-        e = 65537  # 2^16 + 1, a common choice for RSA encryption
-        
         while True:
             self.p = self.generate_random_prime()
             self.q = self.generate_random_prime()
             self.n = self.p * self.q
             totient_n = (self.p - 1) * (self.q - 1)
-            if self.is_relative_prime(totient_n, e):
+            if self.is_relative_prime(totient_n, self.e):
                 break
         
-        self.d = self.find_mod_inverse(e, totient_n)
-        self.public_key = (e, self.n)
+        self.d = self.find_mod_inverse(self.e, totient_n)
+        self.public_key = (self.e, self.n)
         self.private_key = (self.d, self.n)
 
     def convert_message_to_int(self, message):
