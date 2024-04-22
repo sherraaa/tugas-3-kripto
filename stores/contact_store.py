@@ -86,6 +86,7 @@ class ContactStore:
 
     def clear(self):
         self.contacts = []
+        self.loaded = False
         self.page.client_storage.clear()
         self.page.update()
 

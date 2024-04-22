@@ -1,15 +1,29 @@
 import random
 from math import ceil, sqrt
+import base64
 
 class RSA:
-    def __init__(self):
+    def __init__(self, public_key=None, private_key=None):
         self.p = None
         self.q = None
         self.e = 65537 # 2^16 + 1, a common choice for RSA encryption
         self.d = None
         self.n = None
-        self.public_key = None
-        self.private_key = None
+        self.public_key : str = public_key
+        self.private_key : str = private_key
+
+        if public_key and private_key:
+            self.set_keys(public_key, private_key)
+
+    def set_keys(self, public_key: str, private_key: str):
+        self.public_key = public_key
+        self.private_key = private_key
+
+        public_key = public_key.replace("(", "").replace(")", "").replace(" ", "")
+        private_key = private_key.replace("(", "").replace(")", "").replace(" ", "")
+
+        self.n = int(public_key.split(",")[1])
+        self.d = int(private_key.split(",")[0])
 
     def is_prime(self, n):
         if n < 2:
@@ -47,8 +61,8 @@ class RSA:
                 break
         
         self.d = self.find_mod_inverse(self.e, totient_n)
-        self.public_key = (self.e, self.n)
-        self.private_key = (self.d, self.n)
+        self.public_key = f"({self.e}, {self.n})"
+        self.private_key = f"({self.d}, {self.n})"
 
     def convert_message_to_int(self, message):
         array = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
@@ -96,3 +110,47 @@ class RSA:
         plaintext = "".join([str(block).zfill(4) for block in blocks])
         result = self.convert_int_to_message(int(plaintext))
         return result
+    
+
+rsa = RSA()
+rsa.generate_keys()
+print(rsa.public_key)
+print(rsa.private_key)
+
+plaintext = "Hello, World!"
+# convert plaintext to base64
+plaintext = base64.b64encode(plaintext.encode()).decode()
+ciphertext = rsa.encrypt(plaintext)
+
+print(ciphertext)
+
+numbers = ciphertext
+
+# Konversi setiap angka ke dalam string
+numbers_str = [str(num) for num in numbers]
+
+# Gabungkan semua string menjadi satu string tunggal
+numbers_combined = ','.join(numbers_str)
+
+# Konversi string tunggal ke dalam format base64
+base64_encoded = base64.b64encode(numbers_combined.encode()).decode()
+
+# Tampilkan string base64
+print("String base64:", base64_encoded)
+
+# Dekode string base64
+decoded_string = base64.b64decode(base64_encoded).decode()
+
+# Pisahkan string menjadi list angka semula
+decoded_numbers = [int(num) for num in decoded_string.split(',')]
+
+decoded_ciphertext = decoded_numbers
+
+# Tampilkan list angka semula
+print("List angka semula:", decoded_numbers)
+
+decrypted = rsa.decrypt(decoded_ciphertext)
+
+# convert decrypted to base64
+decrypted = base64.b64decode(decrypted.encode()).decode()
+print(decrypted)

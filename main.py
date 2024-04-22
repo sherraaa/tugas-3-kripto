@@ -7,7 +7,8 @@ from pages.Chat import MessageBubble, MessageList
 from router import views_handler
 
 from stores.user_store import UserStore
-from stores.contact_store import ContactStore, Contact, Message
+from stores.contact_store import ContactStore, Message
+from stores.key_store import KeyStore
 from service.supabase import supabase
 
 async def listen_for_messages(page: Page, message_queue: asyncio.Queue):
@@ -78,6 +79,8 @@ async def main(page: Page):
     page.theme.page_transitions.windows = PageTransitionTheme.NONE
     page.theme.page_transitions.android = PageTransitionTheme.NONE
 
+    # await page.client_storage.clear()
+    
     # Create a message queue
     message_queue = asyncio.Queue()
 
@@ -87,6 +90,18 @@ async def main(page: Page):
 
     page.user = UserStore(page)
     page.contacts = ContactStore(page)
+    page.rsa = KeyStore(page)
+
+    print("Contact", page.user.user)
+    print("Contact", page.user)
+
+    session_access_token = await page.client_storage.get_async("session.access_token")
+    session_refresh_token = await page.client_storage.get_async("session.refresh_token")
+    if session_access_token and session_refresh_token:
+        supabase.auth.set_session(
+            access_token=session_access_token,
+            refresh_token=session_refresh_token
+        )
 
     def route_change(route):
         page.views.clear()

@@ -24,3 +24,4 @@ class LoadingView(View):
             self.page.go("/auth")
         elif not self.page.user.user.private_key:
             self.page.go("/profile")
+        self.page.go("/")

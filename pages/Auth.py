@@ -143,6 +143,9 @@ class AuthView(View):
             userid = user.user.id
             username = user.user.user_metadata['username']
 
+            await self.page.client_storage.set_async("session.access_token", supabase.auth.get_session().access_token)
+            await self.page.client_storage.set_async("session.refresh_token", supabase.auth.get_session().refresh_token)
+
             self.page.user.set_user(userid, username, None)
             await self.page.contacts.load_contacts()
 
@@ -215,6 +218,9 @@ class AuthView(View):
             userid = user.user.id
             username = user.user.user_metadata['username']
 
+            await self.page.client_storage.set_async("session.access_token", supabase.auth.get_session().access_token)
+            await self.page.client_storage.set_async("session.refresh_token", supabase.auth.get_session().refresh_token)
+            
             self.page.user.set_user(userid, username, None)
             await self.page.contacts.load_contacts()
 

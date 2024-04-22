@@ -1,7 +1,8 @@
 from flet import *
 from service.supabase import supabase
-from gotrue.types import AuthResponse
+from gotrue.types import UserResponse
 from lib.rsa_oop import RSA
+from stores.key_store import KeyStore
               
 class ProfileView(View):
     def __init__(self, page: Page,):
@@ -10,6 +11,7 @@ class ProfileView(View):
         self.page = page
         self.username = self.page.user.user.username or "Dummy"
         self.scroll = ScrollMode.ADAPTIVE
+        self.rsa : KeyStore = self.page.rsa
 
         # Components
         self.pInput = TextField(
@@ -31,6 +33,7 @@ class ProfileView(View):
         )
 
         self.private_key = TextField(
+            value=self.rsa.rsa.private_key or "",
             label="Private Key",
             border_radius=15,
             border_color=colors.ON_SURFACE_VARIANT,
@@ -40,6 +43,7 @@ class ProfileView(View):
         )
 
         self.public_key = TextField(
+            value=self.rsa.rsa.public_key or "",
             label="Public Key",
             border_radius=15,
             border_color=colors.ON_SURFACE_VARIANT,
@@ -158,7 +162,7 @@ class ProfileView(View):
 
     # Handlers
     def handleRandomize(self, e):
-        rsa_keys = RSA()
+        rsa_keys = self.rsa.rsa
         rsa_keys.generate_keys()
         self.pInput.value = str(rsa_keys.p)
         self.qInput.value = str(rsa_keys.q)
@@ -173,10 +177,30 @@ class ProfileView(View):
         pass
 
     def handleSave(self, e):
+        # try:
+        res : UserResponse = supabase.auth.update_user({
+            "data" : {
+                "public_key" : self.public_key.value,
+            }
+        })
+        self.rsa.set_keys(self.public_key.value, self.private_key.value)
+        self.page.snack_bar = SnackBar(
+            content=Text("Saved!"),
+        )
+
+        self.page.user.set_public_key(self.public_key.value)
         self.page.user.set_private_key(self.private_key.value)
+
+        self.page.snack_bar.open = True
         self.page.update()
         self.page.go("/")
-        pass
+
+        # except Exception as e:
+        #     self.page.snack_bar = SnackBar(
+        #         content=Text(e),
+        #     )
+        #     self.page.snack_bar.open = True
+        #     self.page.update()
 
     def handleLogout(self, e):
         self.page.user.logout()
