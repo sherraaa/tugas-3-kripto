@@ -1,3 +1,4 @@
+import base64
 from datetime import datetime
 from typing import List
 from flet import *
@@ -25,6 +26,7 @@ class MessageBubble(Row):
     def __init__(self, page : Page, message: Message):
         super().__init__()
         self.page = page
+        self.message = message
         self.id = message.id
         self.type = message.type
         self.author = message.author
@@ -56,10 +58,12 @@ class MessageBubble(Row):
                                 Row(
                                     controls=[
                                         ElevatedButton(
-                                            text=("Open"),
+                                            text=("Save"),
+                                            on_click=self.handle_save,
                                         ),
                                         FilledButton(
                                             text=("Decrypt"),
+                                            on_click=self.handle_decrypt,
                                         )
                                     ]
                                 )
@@ -78,11 +82,24 @@ class MessageBubble(Row):
                         content=Text(self.content),
                         padding=8,
                         width=self.container_width,
+                        on_click=self.on_click_text,
                     ),
                     color=colors.SURFACE if self.rtl else colors.BACKGROUND,
                 ),
                 self.status,
             ]
+
+    def on_click_text(self, e):
+        self.page.message = self.message
+        self.page.go("/message/text/decyrpt")
+
+    def handle_save(self, e):
+        self.page.message = self.message
+        self.page.go("/message/file/encrypt")
+
+    def handle_decrypt(self, e):
+        self.page.message = self.message
+        self.page.go("/message/file/decrypt")
 
 class MessageList(Container):
     message_list = ListView(
@@ -133,6 +150,13 @@ class ChatInput(Row):
         self.message_list = message_list
         self.recipient = recipient
 
+        self.type = "text"
+
+        self.file_picker = FilePicker(
+            on_result=self.file_picker_result,
+        )
+        self.page.overlay.append(self.file_picker)
+
         self.text_field = TextField(
             border_radius=15,
             border_color=colors.ON_SURFACE_VARIANT,
@@ -145,30 +169,75 @@ class ChatInput(Row):
             on_submit=self.handle_send,
         )
 
+        self.attach_file_button = IconButton(
+            icon=icons.ATTACH_FILE,
+            on_click=lambda _ : self.file_picker.pick_files(allow_multiple=False),
+        )
+
+        self.send_button = IconButton(
+            icon=icons.ARROW_FORWARD,
+            on_click=self.handle_send,
+        )
+
+        self.cancel_button = IconButton(
+            icon=icons.CANCEL_OUTLINED,
+            on_click=self.handle_cancel,
+        )
+
         self.controls = [
             self.text_field,
-            IconButton(
-                icon=icons.ATTACH_FILE,
-                on_click=self.handle_attach_file,
-            ),
-            IconButton(
-                icon=icons.ARROW_FORWARD,
-                on_click=self.handle_send,
-            ),
+            self.attach_file_button,
+            self.send_button,
         ]
 
-    def handle_attach_file(self, e):
-        print("Attach file")
+    def file_picker_result(self, e : FilePickerResultEvent):
+        self.attach_file_button.disabled = True if e.files is None else False
+        if e.files:
+            self.file_dir = e.files[0].path
+            self.text_field.value = ", ".join(map(lambda f: f.name, e.files))
+            self.text_field.read_only = True
+
+            self.type = "file"
+            self.controls = [
+                self.text_field,
+                self.cancel_button,
+                self.send_button,
+            ]
+        self.page.update()
+
+    def on_upload(self) -> str:
+        # uploading file returning string
+        file = open(self.file_dir, "rb")
+        file_data = file.read()
+        file.close()
+
+        if '/' in self.file_dir:
+            filename = self.file_dir.split("/")[-1]
+        else:
+            filename = self.file_dir.split("\\")[-1]
+
+        file_data = (filename + "||||||").encode() + file_data
+        print(file_data)
+        
+        # convert to base64
+        file_data = base64.b64encode(file_data).decode()
+
+        return supabase.table("files").insert({
+            "data" : file_data,
+        }).execute()
+
 
     def handle_send(self, e):
         print("Send message")
         try:
+            if self.type == "file":
+                file_data, count = self.on_upload()
 
             data, count = supabase.table("messages").insert({
-                "type": "text",
+                "type": "text" if self.type == "text" else "file",
                 "author": self.page.user.user.username,
                 "recipient": self.recipient.username,
-                "content": self.text_field.value,
+                "content": self.text_field.value if self.type == "text" else file_data[1][0]['id'],
                 "created_at": datetime.now().isoformat(),
             }).execute()
 
@@ -182,8 +251,16 @@ class ChatInput(Row):
 
             self.message_list.add_message(message=MessageBubble(self.page, message))
             self.recipient.add_message(message)
-
+            self.page.client_storage.set("contacts", self.page.contacts.contacts)
+            
             self.text_field.value = ""
+            self.text_field.read_only = False
+            self.type = "text"
+            self.controls = [
+                self.text_field,
+                self.attach_file_button,
+                self.send_button,
+            ]
             self.page.update()
         except Exception as e:
             # print stacktrace
@@ -194,6 +271,18 @@ class ChatInput(Row):
             )
             self.page.snack_bar.open = True
             self.page.update()
+
+    def handle_cancel(self, e):
+        print("Cancel")
+        self.text_field.value = ""
+        self.text_field.read_only = False
+        self.type = "text"
+        self.controls = [
+            self.text_field,
+            self.attach_file_button,
+            self.send_button,
+        ]
+        self.page.update()
         
 class ChatView(View):
     def __init__(self, page: Page, contact):

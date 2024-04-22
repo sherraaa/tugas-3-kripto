@@ -9,7 +9,6 @@ class AuthView(View):
         self.page = page
         self.vertical_alignment = MainAxisAlignment.CENTER
         self.horizontal_alignment = CrossAxisAlignment.CENTER
-        self.spacing = 25
 
         print(self.page.contacts.print_contacts())
 
@@ -79,16 +78,21 @@ class AuthView(View):
         )
 
         self.controls = [
-            self.image,
-            self.segmentedButton,
-            Column(
-                [
-                    self.usernameInput,
-                    self.passwordInput,
-                    self.repeatPasswordInput,
-                    self.submitButton,
+            ListView(
+                controls=[
+                    self.image,
+                    self.segmentedButton,
+                    Column(
+                        [
+                            self.usernameInput,
+                            self.passwordInput,
+                            self.repeatPasswordInput,
+                            self.submitButton,
+                        ],
+                        spacing=15,
+                    )
                 ],
-                spacing=20,
+                spacing=25.
             )
         ]
     

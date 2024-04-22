@@ -3,6 +3,7 @@ from flet import *
 class LoadingView(View):
     def __init__(self, page: Page):
         super().__init__()
+        self.route = "/loading"
         self.page = page
         self.controls = [
             ProgressRing(

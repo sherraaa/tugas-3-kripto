@@ -21,20 +21,19 @@ class Contact:
     last_message: str
     chat: List[Message] = []
 
-    def __init__(self, username: str, last_message: str, chat = []):
+    def __init__(self, username: str, last_message: str = None, chat = []):
         self.username = username
-        self.last_message = last_message
+        self.last_message = last_message if last_message else "Start a conversation with " + username + " now!"
         self.load_chat(chat)
 
     def load_chat(self, chat):
         self.chat = []
         for message in chat:
-            print(message)
             self.chat.append(Message(message["id"], message["type"], message["author"], message["content"], message["created_at"]))
 
     def add_message(self, message: Message):
         self.chat.append(message)
-        self.last_message = message.content
+        self.last_message = message.content if message.type == "text" else "Sent an encrypted file"
         
 
 class ContactStore: 
@@ -45,6 +44,8 @@ class ContactStore:
         self.contacts = []
         self.loaded = False
         asyncio.create_task(self.load_contacts())
+        print("Contact store initialized")
+        self.print_contacts()
 
     async def load_contacts(self):
         self.contacts = []
@@ -63,7 +64,7 @@ class ContactStore:
             
         # adding to the top
         self.contacts.insert(0, contact)
-        asyncio.create_task(self.page.client_storage.set_async("contacts", self.contacts))
+        self.page.client_storage.set("contacts", self.contacts)
 
     def search_contact(self, username: str):
         for contact in self.contacts:
@@ -109,7 +110,6 @@ class ContactStore:
         if contact:
             contact.add_message(message)
             self.move_contact_to_top(contact)
-            self.update_client_storage()
         else:
             contact = Contact(
                 username=message.author,

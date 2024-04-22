@@ -5,6 +5,7 @@ from pages.Auth import AuthView
 from pages.AddContact import AddContactView
 from pages.Chat import ChatView
 from pages.Loading import LoadingView
+from pages.Message import MessageView
 
 def views_handler(page: Page, path: str):
     troute = TemplateRoute(path)
@@ -21,5 +22,7 @@ def views_handler(page: Page, path: str):
         view = ChatView(page=page, contact=troute.username)
     elif troute.match('/loading'):
         view = LoadingView(page=page)
+    elif troute.match('/message/:type/:encrypt_or_decrypt'):
+        view = MessageView(page=page, type=troute.type, encrypt_or_decrypt=troute.encrypt_or_decrypt)
 
     return view

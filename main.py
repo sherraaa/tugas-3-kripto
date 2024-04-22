@@ -104,8 +104,9 @@ async def main(page: Page):
     page.on_route_change = route_change
     page.on_view_pop = view_pop
     
-    page.go("/loading")
 
+    # page.go("/message/file/decrypt")
+    page.go('/loading')
 
 if __name__ == "__main__":
     app(target=main, assets_dir="assets")
