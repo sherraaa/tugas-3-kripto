@@ -1,4 +1,6 @@
 import base64
+from datetime import datetime
+import os
 from flet import *
 from service.supabase import supabase
 from pages.Chat import MessageBubble
@@ -19,8 +21,25 @@ class MessageView(View):
         )
 
         if self.type == "file":
-            data, count = supabase.table("files").select("*").eq("id", self.message.content).execute()
-            print(data)
+            file_id = self.message.content
+            decoded_file_id = base64.b64decode(file_id).decode()
+            decoded_numbers = [int(number) for number in decoded_file_id.split(",")]
+            decrypted_content = self.page.rsa.rsa.decrypt(decoded_numbers)
+            decrypted_content_base64 = base64.b64decode(decrypted_content).decode()
+            file_id = decrypted_content_base64
+            data, count = supabase.table("files").select("*").eq("id", file_id).execute()
+            
+            self.content = data[1][0]["data"]
+            self.label = "File"
+
+            if self.encrypt_or_decrypt == "decrypt":
+                encrypted_file = self.content
+                decoded_file = base64.b64decode(encrypted_file).decode()
+                decoded_file_numbers = [int(number) for number in decoded_file.split(",")]
+                decrypted_content = self.page.rsa.rsa.decrypt(decoded_file_numbers)
+                decrypted_content_base64 = base64.b64decode(decrypted_content).decode()
+                self.content = decrypted_content_base64
+                
         else:
             if self.encrypt_or_decrypt == "encrypt":
                 content = self.message.content
@@ -34,6 +53,12 @@ class MessageView(View):
             else:
                 self.content = self.message.content
                 self.label = "Ciphertext"
+
+        self.save_file = FilePicker(
+            on_result=self.handle_save,
+        )
+        self.page.overlay.append(self.save_file)
+
 
         self.appbar = AppBar(
             title=Text("Message", weight=FontWeight.BOLD),
@@ -52,12 +77,13 @@ class MessageView(View):
             border_color=colors.ON_SURFACE_VARIANT,
             expand=True,
             min_lines=3,
-            max_lines=10,
+            max_lines=25,
         )
 
         self.save_button = FilledButton(
             text="Save",
             width=200,
+            on_click=lambda _ : self.save_file.get_directory_path(),
         )
 
         self.controls = [
@@ -80,5 +106,40 @@ class MessageView(View):
                 expand=True
             )
         ]
+    
+    def handle_save(self, e):
+        save_location = e.path
+        if save_location:
+            try:
+                if '||||||' in self.content:
+                    file_name, file_content = self.content.split("||||||")
+                else:
+                    time = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    file_name = "susisasisu " + time + ".sus"
+                    file_content = self.content
+                with open(os.path.join(save_location, file_name), "w") as file:
+                    file.write(file_content)
+                file.close()
+            except Exception as e:
+                print(e)
+                self.page.snack_bar = SnackBar(
+                    content=Text("Failed to save file"),
+                )
+                self.page.snack_bar.open = True
+                self.page.update()
+            else:
+                self.page.snack_bar = SnackBar(
+                    content=Text("File saved successfully"),
+                )
+                self.page.snack_bar.open = True
+                self.page.update()
+        else:
+            self.page.snack_bar = SnackBar(
+                content=Text("No save location selected"),
+            )
+            self.page.snack_bar.open = True
+            self.page.update()
+
+                
 
         
